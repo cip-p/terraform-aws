@@ -1,0 +1,33 @@
+name: "Terraform validate"
+
+defaults:
+  run:
+    shell: bash
+on:
+  push:
+    branches: ['**']
+    tags-ignore: ['*.*']
+
+jobs:
+  validate:
+    strategy:
+      fail-fast: false
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.3.7
+
+      - name: Verify Terraform version
+        run: terraform --version
+
+      - name: Terraform format check
+        run: terraform fmt -recursive -check
+        continue-on-error: true
+
+      - name: Terraform validation
+        run: find . -type f -name "*.tf" -exec dirname {} \;|sort -u | while read m; do (cd "$m" && terraform init -input=false -backend=false &>/dev/null  && terraform validate && echo "√ $m" || { echo "❌ $m"; exit 1; } ); done
